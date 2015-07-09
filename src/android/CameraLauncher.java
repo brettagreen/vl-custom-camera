@@ -55,6 +55,11 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.util.Log;
 import android.content.pm.PackageManager;
+import android.content.Context;
+import android.hardware.Camera;
+import android.hardware.Camera.PictureCallback;
+
+
 /**
  * This class launches the camera view, allows the user to take a picture, closes the camera view,
  * and returns the captured image.  When the camera view is closed, the screen displayed before
@@ -102,6 +107,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
     private MediaScannerConnection conn;    // Used to update gallery app with newly-written files
     private Uri scanMe;                     // Uri of image to be added to content store
     private Uri croppedUri;
+    private CameraSurfaceView csv = null;
 
     /**
      * Executes the request and returns PluginResult.
@@ -146,7 +152,8 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
 
              try {
                 if (srcType == CAMERA) {
-                    this.takePicture(destType, encodingType);
+                    this.takePicture();
+                    //this.takePicture(destType, encodingType);
                 }
                 else if ((srcType == PHOTOLIBRARY) || (srcType == SAVEDPHOTOALBUM)) {
                     this.getImage(srcType, destType, encodingType);
@@ -168,7 +175,24 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         }
         return false;
     }
-
+    
+    public void takePicture() {
+        
+        Context context = this.cordova.getActivity().getApplicationContext(); 
+        csv = new CameraSurfaceView(context);
+    }
+    
+    
+    public Camera.PictureCallback jpegHandler = new Camera.PictureCallback() {
+        public void onPictureTaken(byte[] data, Camera camera) {           
+            Bitmap bitmap = null;
+            Uri uri;
+            
+            bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+            processPicture(bitmap);
+            
+        }
+    };
     //--------------------------------------------------------------------------
     // LOCAL METHODS
     //--------------------------------------------------------------------------
@@ -209,7 +233,7 @@ public class CameraLauncher extends CordovaPlugin implements MediaScannerConnect
         // Save the number of images currently on disk for later
         this.numPics = queryImgDB(whichContentStore()).getCount();
 
-        // Let's use the intent and see what happens
+        // Let's use the intent and see what happens <--- ?lol?
         Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
 
         // Specify file so that large image is captured and returned
